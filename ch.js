@@ -299,7 +299,7 @@ class Private{
             })
             
             .then( (response) => {
-                var token = response["headers"]["set-cookie"].join("\n");
+                var token = response["headers"]["set-cookie"];
                 token = token.match(/auth\.chatango\.com ?= ?([^;]*)/);
                 if (token !== null){
                     token = token[1];
