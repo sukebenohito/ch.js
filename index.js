@@ -1,7 +1,7 @@
 var ch = require('./ch');
 var Bot = new ch.Chatango();
 //Bot.easy_start("uwuUserName", "uwuPassword", ["nico-nico", "desertofdead"]);
-Bot.easy_start("uwuUserName", "", ["nico-nico", "desertofdead"]);// run as anon check nico-nico.chatango.com   
+Bot.easy_start(process.env.CHID, process.env.CHPW, ["nico-nico", "desertofdead"]);// run as anon check nico-nico.chatango.com   
 Bot.nameColor = "f00";
 
 var owner = "agung"
