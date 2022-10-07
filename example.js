@@ -1,10 +1,15 @@
+const express = require('express')
+const app = express()
+app.all('/', (req, res) => {
+    console.log("Just got a request!")
+    res.send('Yo!')
+    var ch = require('./ch');
+    var Bot = new ch.Chatango();
+    //Bot.easy_start("uwuUserName", "uwuPassword", ["nico-nico", "desertofdead"]);
+    Bot.easy_start("uwuUserName", "", ["nico-nico", "desertofdead"]);// run as anon check nico-nico.chatango.com   
+    Bot.nameColor = "f00";
+})
 
-var ch = require('./ch');
-
-var Bot = new ch.Chatango();
-//Bot.easy_start("uwuUserName", "uwuPassword", ["nico-nico", "desertofdead"]);
-Bot.easy_start("uwuUserName", "", ["nico-nico", "desertofdead"]);// run as anon check nico-nico.chatango.com
-Bot.nameColor = "f00";
 
 var owner = "agung"
 var prefix = "!"
@@ -51,3 +56,5 @@ Bot.on('Message', (room, user, message) => {
        }
     }
 });
+
+app.listen(process.env.PORT || 3000)
