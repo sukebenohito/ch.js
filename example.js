@@ -1,11 +1,3 @@
-const express = require('express')
-const app = express()
-app.all('/', (req, res) => {
-    console.log("Just got a request!")
-    res.send('Yo!')
-   
-})
-
 var ch = require('./ch');
 var Bot = new ch.Chatango();
 //Bot.easy_start("uwuUserName", "uwuPassword", ["nico-nico", "desertofdead"]);
@@ -57,5 +49,3 @@ Bot.on('Message', (room, user, message) => {
        }
     }
 });
-
-app.listen(process.env.PORT || 3000)
