@@ -1,11 +1,15 @@
-var ch = require('./ch');
-var Bot = new ch.Chatango();
+const { Chatango } = require('./ch');
+const Bot = new Chatango();
+
+//require('dotenv').config()
+
 //Bot.easy_start("uwuUserName", "uwuPassword", ["nico-nico", "desertofdead"]);
+
 Bot.easy_start(process.env.CHID, process.env.CHPW, ["nico-nico", "desertofdead"]);// run as anon check nico-nico.chatango.com   
 Bot.nameColor = "f00";
 
-var owner = "agung"
-var prefix = "!"
+var owner = "agung" //replace this with your own chatango ID
+var prefix = "!" //try type !rooms
 
 Bot.on('PrivateMessage', (pm, user, message) => {
     console.log("PM", user.name, message.text, message.time);
