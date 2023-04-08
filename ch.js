@@ -152,18 +152,21 @@ class Room {
         this.channel = "0"
 	this.reconnectAttemptDelay = 5000;
 	this.status = "not_ok";
+	this.uid = _genUid();
     }
     
     connect(){
         var ws = new WebSocket(`wss://${this.server}:${this.port}`, {
             origin: 'https://st.chatango.com'
         });
-        ws.on('open', () => {this._connected(); this.status = "ok";});
-	ws.on('error', (data) => {this.status = "not_ok";});
-        ws.on('close', (data) => {
-		this.status = "not_ok";
-		console.log(`${data} - Reconnecting in ${this.reconnectAttemptDelay}ms...`);
-		setTimeout(() => this.connect(), this.reconnectAttemptDelay);
+        ws.on('open', () => {this._connected();});
+	ws.on('error', (data) => {this._disconnected();});
+        ws.on('close', (code) => {
+		this._disconnected() 
+		if (this.status == "ok" & code == 1006){
+			console.log(`${code} - Reconnecting in ${this.reconnectAttemptDelay}ms...`);
+			setTimeout(() => this.connect(), this.reconnectAttemptDelay);
+		}
 	});
         ws.on('message', (data) => this.feed(data.toString()));
         this.ws = ws
@@ -171,14 +174,18 @@ class Room {
 
     _auth(){
         if (this.mgr.username !== "" & this.mgr.password !== ""){
-            this.sendCommand("bauth", this.name, _genUid(), this.mgr.username, this.mgr.password);
+		this.sendCommand("bauth", this.name, this.uid, this.mgr.username, this.mgr.password);
+        }
+	else if (this.mgr.username !== ""){
+		this.sendCommand("bauth", this.name, this.uid);
+		this.sendCommand("blogin", this.mgr.username);
         }
         else{
-          
-            this.sendCommand("bauth", this.name, _genUid());
+		this.sendCommand("bauth", this.name, this.uid);
         }
     }
     _connected () {
+	this.status = "ok"
         console.log('connected ' + this.name);
         this._auth();
         this._setPingInterval();
@@ -193,7 +200,8 @@ class Room {
         }, 10000);
     }
     
-    _disconnected () {
+    _disconnected() {
+	this.status = "not_ok"
         clearInterval(this.pingInterval);
         console.log('disconnected ' + this.name);
     }
@@ -204,8 +212,7 @@ class Room {
     
     feed(food){
         //console.log(food.toString());
-        const [cmd, ...args] = food.split(":");
-        
+        const [cmd, ...args] = food.split(":");   
         const handler = this[`_rcmd_${cmd}`];
         if (handler === undefined) {
            //console.log(`Received command that has no handler from ${this.identifier}: <${cmd}>: ${args}`);
@@ -232,8 +239,13 @@ class Room {
                 msg = msg.replace(/</g, "&lt;");
                 msg = msg.replace(/>/g, "&gt;");
         }
-        msg = `<n${this.mgr.nameColor}/>` + msg
-        msg = `<f x${this.mgr.fontSize}${this.mgr.fontColor}="${this.mgr.fontFace}">` + msg
+	msg = `<f x${this.mgr.fontSize}${this.mgr.fontColor}="${this.mgr.fontFace}">` + msg
+	if (this.mgr.username !== "" & this.mgr.password !== ""){
+        	msg = `<n${this.mgr.nameColor}/>` + msg
+	}
+	else{
+		msg = `<n${this.uid.slice(0, 4)}/>` + msg
+	}
         msg = msg.replace(/\n/g, "\r");
         this.sendCommand("bm", "t12r", this.channel, msg);
     }
@@ -261,7 +273,6 @@ class Room {
                 name = "!anon" + _getAnonId(n, args[3]);
             }
         }
-        
         var user = User(name);
         var ip = args[6];
         var channel = args[7];
@@ -294,12 +305,14 @@ class Private{
         var ws = new WebSocket(`wss://${this.server}:${this.port}`, {
             origin: 'https://st.chatango.com'
         });
-        ws.on('open', () => {this._connected(); this.status = "ok";});
-	ws.on('error', (data) => {this.status = "not_ok";});
-        ws.on('close', (data) => {
-		this.status = "not_ok";
-		console.log(`${data} - Reconnecting in ${this.reconnectAttemptDelay}ms...`);
-		setTimeout(() => this.connect(), this.reconnectAttemptDelay);
+        ws.on('open', () => {this._connected();});
+	ws.on('error', (data) => {this._disconnected();});
+        ws.on('close', (code) => {
+		this._disconnected() 
+		if (this.status == "ok" & code == 1006){
+			console.log(`${code} - Reconnecting in ${this.reconnectAttemptDelay}ms...`);
+			setTimeout(() => this.connect(), this.reconnectAttemptDelay);
+		}
 	});
         ws.on('message', (data) => this.feed(data.toString()));
         this.ws = ws
@@ -308,7 +321,6 @@ class Private{
     
     _auth(){
         if (this.mgr.username !== "" & this.mgr.password !== ""){
-            
             const response = Axios.get('https://chatango.com/login', {
                 params: {
                     user_id: this.mgr.username,
@@ -319,17 +331,25 @@ class Private{
             })
             
             .then( (response) => {
-                var token = response["headers"]["set-cookie"];
-                token = token.match(/auth\.chatango\.com ?= ?([^;]*)/);
-                if (token !== null){
-                    token = token[1];
-                    this.sendCommand("tlogin", token, "2");
-                }
+		try{
+			var token = response["headers"]["set-cookie"].toString();
+                	token = token.match(/auth\.chatango\.com ?= ?([^;]*)/);
+			
+                	if (token !== null){
+                    		token = token[1];
+                    		this.sendCommand("tlogin", token, "2");
+                	}
+		}
+		catch(err){
+			this.disconnect();
+			console.log(err);
+		}
             })   
         }
     }
     
-    _connected () {
+    _connected() {
+	this.status = "ok"
         console.log('connected ' + this.name);
         this._auth();
         this._setPingInterval();
@@ -344,7 +364,8 @@ class Private{
         }, 10000);
     }
     
-    _disconnected () {
+    _disconnected(){
+	this.status = "not_ok";
         clearInterval(this.pingInterval);
         console.log("disconnected " + this.name);
     }
