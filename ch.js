@@ -160,13 +160,18 @@ class Room {
             origin: 'https://st.chatango.com'
         });
         ws.on('open', () => {this._connected();});
-	ws.on('error', (data) => {this._disconnected();});
+	ws.on('error', (data) => {console.log(data);});
         ws.on('close', (code) => {
-		this._disconnected() 
-		if (this.status == "ok" & code == 1006){
+		console.log(code, this.status);
+		if (code == 1006 && this.status == "ok"){
+			this._disconnected();
 			console.log(`${code} - Reconnecting in ${this.reconnectAttemptDelay}ms...`);
-			setTimeout(() => this.connect(), this.reconnectAttemptDelay);
+			setTimeout(() => {this.status = "ok"; this.connect();}, this.reconnectAttemptDelay);
 		}
+		else{
+			this._disconnected();
+		}
+		
 	});
         ws.on('message', (data) => this.feed(data.toString()));
         this.ws = ws
@@ -306,13 +311,18 @@ class Private{
             origin: 'https://st.chatango.com'
         });
         ws.on('open', () => {this._connected();});
-	ws.on('error', (data) => {this._disconnected();});
+	ws.on('error', (data) => {console.log(data);});
         ws.on('close', (code) => {
-		this._disconnected() 
-		if (this.status == "ok" & code == 1006){
+		console.log(code, this.status);
+		if (code == 1006 && this.status == "ok"){
+			this._disconnected();
 			console.log(`${code} - Reconnecting in ${this.reconnectAttemptDelay}ms...`);
-			setTimeout(() => this.connect(), this.reconnectAttemptDelay);
+			setTimeout(() => {this.status = "ok"; this.connect();}, this.reconnectAttemptDelay);
 		}
+		else{
+			this._disconnected();
+		}
+		
 	});
         ws.on('message', (data) => this.feed(data.toString()));
         this.ws = ws
