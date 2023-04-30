@@ -24,7 +24,8 @@ Bot.on('Message', (room, user, message) => {
     }
         
     if (message.text[0] === prefix){
-        var [cmd, args] = message.text.slice(1).split(" ", 2);
+        var [cmd, ...args] = message.text.slice(1).split(" ");
+        args = args.join(" ");
     }
   
     if (cmd==="rooms"){
