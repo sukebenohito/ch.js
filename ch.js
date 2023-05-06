@@ -316,7 +316,7 @@ class Private{
 		console.log(code, this.status);
 		if (code == 1006 && this.status == "ok"){
 			this._disconnected();
-			console.log(`${code} - Reconnecting in ${this.reconnectAttemptDelay}ms...`);
+			//console.log(`${code} - Reconnecting in ${this.reconnectAttemptDelay}ms...`);
 			setTimeout(() => {this.status = "ok"; this.connect();}, this.reconnectAttemptDelay);
 		}
 		else{
@@ -413,8 +413,32 @@ class Private{
             this.sendCommand("msg", username, message)
         } 
     }
+	
+
+	track(username) {
+		return new Promise((resolve, reject) => {
+			this.sendCommand("track", username);
+			this._rcmd_track = function (...args) {
+				resolve(args);
+			};
+		});
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     _rcmd_OK(...args){
+
         this.sendCommand("wl");
         this.sendCommand("getblock");
         this.sendCommand("getpremium", "1");
@@ -452,8 +476,10 @@ class Chatango  extends EventEmitter {
     easy_start(user, password, rooms){
         this.username = user;
         this.password = password;
-        this.PM = new Private(this);
-        this.PM.connect();
+	if (this.username !== "" & this.password !== ""){
+		this.PM = new Private(this);
+		this.PM.connect();
+        }
         for (var i = 0; i < rooms.length; i++) {
             this.joinRoom(rooms[i]);
         }
