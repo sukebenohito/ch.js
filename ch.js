@@ -7,9 +7,7 @@ const WebSocket = require('ws');
 const EventEmitter = require('events');
 const Axios = require('axios');
 
-function _getServer(group) {
-    
-    const tsweights = [['5', 75], ['6', 75], ['7', 75], ['8', 75], ['16', 75], ['17', 75], ['18', 75], 
+const tsweights = [['5', 75], ['6', 75], ['7', 75], ['8', 75], ['16', 75], ['17', 75], ['18', 75], 
                        ['9', 95], ['11', 95], ['12', 95], ['13', 95], ['14', 95], ['15', 95], ['19', 110],
                        ['23', 110], ['24', 110], ['25', 110], ['26', 110], ['28', 104], ['29', 104],
                        ['30', 104], ['31', 104], ['32', 104], ['33', 104], ['35', 101], ['36', 101], 
@@ -20,6 +18,8 @@ function _getServer(group) {
                        ['64', 110], ['65', 110], ['66', 110], ['68', 95], ['71', 116], ['72', 116], 
                        ['73', 116], ['74', 116], ['75', 116], ['76', 116], ['77', 116], ['78', 116], 
                        ['79', 116], ['80', 116], ['81', 116], ['82', 116], ['83', 116], ['84', 116]];
+
+function _getServer(group) {
 
     group = group.replace('_', 'q').replace('-', 'q');
 
@@ -127,16 +127,21 @@ function User(name){
 class _User{
     constructor(name) {
         this.name = name;
+	this.puid = "";
+	this.nameColor = "000";
+	this.fontFace = "0";
+	this.fontSize = "10";
     }
 }
 
 class Message{
-    constructor(text, time, user, ip = "", channel = "") {
+    constructor(text, time, user, ip = "", channel = "", puid) {
         this.time = time;
         this.text = text;
         this.user = user;
         this.channel = channel;
         this.ip = ip;
+	this.puid = puid;
     }
 }
 
@@ -258,17 +263,87 @@ class Room {
     setBgMode(mode){
         this.sendCommand("msgbg", mode.toString());
     }
-    
+
+
+    _rcmd_ok(...args){
+        this.sendCommand("g_participants", "start")
+        this.sendCommand("getpremium", "1");
+    }
+
+    _rcmd_g_participants(...args){
+	var args = args.join(":")
+	args = args.split(";")
+	
+	for (var i = 0; i < args.length; i++) {
+		var data = args[i].split(":");
+		var sid = data[0];
+		var usertime = parseFloat(data[1]);
+		var name = data[3];
+		var puid = data[2];
+		if (name.toLowerCase() === "none"){
+ 			var n = String(parseInt(usertime)).slice(-4);
+			if (data[4].toLowerCase() == "none"){
+				name = "!anon" + _getAnonId(n, puid);
+			}
+			else {
+				name = "#" + data[4];
+			}
+		}
+		var user = User(name);
+		user.puid = puid;
+	}
+    }
+
+    _rcmd_participant(...args){
+	var name = args[3];
+	var sid = args[1];
+	var usertime = parseFloat(args[6]);
+	var puid = args[2];
+	//console.log(name, sid, usertime, puid);
+	if (name.toLowerCase() === "none"){
+ 		var n = String(parseInt(usertime)).slice(-4);
+		if (args[4].toLowerCase() == "none"){
+			name = "!anon" + _getAnonId(n, puid);
+		}
+		else {
+			name = "#" + args[4];
+		}
+	}
+	var user = User(name);
+	user.puid = puid;
+
+	if (args[0] === "0") { //leave
+		this.mgr.emit('onLeave', user, puid);
+	}
+
+	if (args[0] === "1" || args[0] === "2"){ //join
+		this.mgr.emit('onJoin', user, puid);
+	}
+    }
+
     _rcmd_i(...args){
-        var user = args[1];
+        var name = args[1];
         var [msg, n, f] = _clean_message(args.slice(9).join(":"));
         var [color, face, size] = _parseFont(f);
+
+	if (name === ""){
+            name = "#" + args[2];
+            if (name === "#"){
+                name = "!anon" + _getAnonId(n, args[3]);
+            }
+        }
+	var user = User(name);
+	user.nameColor = n;
+	user.fontFace = face;
+	user.fontSize = size;
+	user.fontColor = color; 
     }
     
     _rcmd_b(...args){
         //console.log(args);
         var time = args[0];
         var name = args[1];
+	var puid = args[3];
         var [msg, n, f] = _clean_message(args.slice(9).join(":"));
         var [color, face, size] = _parseFont(f);
         
@@ -279,17 +354,22 @@ class Room {
             }
         }
         var user = User(name);
+	user.nameColor = n;
+	user.fontFace = face;
+	user.fontSize = size;
+	user.fontColor = color;
+	
         var ip = args[6];
         var channel = args[7];
         this.channel = channel;
         
-        msg = new Message(msg, time, user, ip, channel);
+        msg = new Message(msg, time, user, ip, channel, puid);
         this.mgr.emit('Message', this, user, msg);
     }
     
-    _rcmd_u(...args){
+    //_rcmd_u(...args){
         
-    }
+    //}
 }
 
 class Private{
@@ -424,18 +504,6 @@ class Private{
 		});
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-
     
     _rcmd_OK(...args){
 
@@ -493,6 +561,7 @@ class Chatango  extends EventEmitter {
     leaveRoom(room){
         var room = this.rooms[room];
         if (room !== undefined || room !== null){
+            room.status = "not_ok";
             room.disconnect();
         }
     }
