@@ -158,6 +158,7 @@ class Room {
 	this.reconnectAttemptDelay = 5000;
 	this.status = "not_ok";
 	this.uid = _genUid();
+	this.sids = {};
     }
     
     connect(){
@@ -264,6 +265,13 @@ class Room {
         this.sendCommand("msgbg", mode.toString());
     }
 
+    get userlist(){
+	let newset = [];
+	for (const [sid, userdata] of Object.entries(this.sids)) {
+		newset.push(userdata[0]);
+	}
+	return newset;
+    }
 
     _rcmd_ok(...args){
         this.sendCommand("g_participants", "start")
@@ -291,6 +299,7 @@ class Room {
 		}
 		var user = User(name);
 		user.puid = puid;
+		this.sids[sid] = [name, usertime, puid];
 	}
     }
 
@@ -311,6 +320,7 @@ class Room {
 	}
 	var user = User(name);
 	user.puid = puid;
+	this.sids[sid] = [name, usertime, puid];
 
 	if (args[0] === "0") { //leave
 		this.mgr.emit('onLeave', user, puid);
@@ -568,8 +578,10 @@ class Chatango  extends EventEmitter {
     
     stop(){
         for (const [ key, value ] of Object.entries(this.rooms)) {
+            value.status = "not_ok";
             value.disconnect();
         }
+	this.PM.status = "not_ok";
         this.PM.disconnect();
     }
 }
