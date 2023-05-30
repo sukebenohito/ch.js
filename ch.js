@@ -323,6 +323,7 @@ class Room {
 	this.sids[sid] = [name, usertime, puid];
 
 	if (args[0] === "0") { //leave
+		delete this.sids[sid]
 		this.mgr.emit('onLeave', user, puid);
 	}
 
