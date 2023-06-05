@@ -567,15 +567,17 @@ class Chatango  extends EventEmitter {
     }
     
     joinRoom(room){
-        this.rooms[room] = new Room(this, room);
-        this.rooms[room].connect();
+	if (!this.rooms.hasOwnProperty(room)){
+		this.rooms[room] = new Room(this, room);
+		this.rooms[room].connect();
+	}
     }
     
     leaveRoom(room){
         if (room in this.rooms){
-            let _room = this.rooms[room];
-            _room.status = "not_ok";
-            _room.disconnect();
+		let _room = this.rooms[room];
+		_room.status = "not_ok";
+		_room.disconnect();
         }
     }
     
