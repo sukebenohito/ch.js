@@ -320,15 +320,17 @@ class Room {
 	}
 	var user = User(name);
 	user.puid = puid;
-	this.sids[sid] = [name, usertime, puid];
 
 	if (args[0] === "0") { //leave
-		delete this.sids[sid]
-		this.mgr.emit('onLeave', user, puid);
+		if(sid in this.sids){
+			delete this.sids[sid]
+			this.mgr.emit('onLeave', user, puid);
+		}
 	}
 
 	if (args[0] === "1" || args[0] === "2"){ //join
 		this.mgr.emit('onJoin', user, puid);
+		this.sids[sid] = [name, usertime, puid];
 	}
     }
 
@@ -570,8 +572,8 @@ class Chatango  extends EventEmitter {
     }
     
     leaveRoom(room){
-        var room = this.rooms[room];
-        if (room !== undefined || room !== null){
+        if (room in this.rooms){
+            let room = this.rooms[room];
             room.status = "not_ok";
             room.disconnect();
         }
@@ -587,4 +589,4 @@ class Chatango  extends EventEmitter {
     }
 }
 
-exports.Chatango = Chatango;
+module.exports = {Chatango, User};
