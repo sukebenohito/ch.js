@@ -573,9 +573,9 @@ class Chatango  extends EventEmitter {
     
     leaveRoom(room){
         if (room in this.rooms){
-            let room = this.rooms[room];
-            room.status = "not_ok";
-            room.disconnect();
+            let _room = this.rooms[room];
+            _room.status = "not_ok";
+            _room.disconnect();
         }
     }
     
