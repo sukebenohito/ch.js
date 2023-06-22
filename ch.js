@@ -135,13 +135,14 @@ class _User{
 }
 
 class Message{
-    constructor(text, time, user, ip = "", channel = "", puid) {
+    constructor(text, time, user, ip = "", channel = "", puid, msgid = "") {
         this.time = time;
         this.text = text;
         this.user = user;
         this.channel = channel;
         this.ip = ip;
 	this.puid = puid;
+	this.msgid = msgid;
     }
 }
 
@@ -159,6 +160,10 @@ class Room {
 	this.status = "not_ok";
 	this.uid = _genUid();
 	this.sids = {};
+	this.history = [];
+	this.log_i = [];
+	this.mqueue = {};
+	this.umqueue = {};
     }
     
     connect(){
@@ -172,7 +177,14 @@ class Room {
 		if (code == 1006 && this.status == "ok"){
 			this._disconnected();
 			console.log(`${code} - Reconnecting in ${this.reconnectAttemptDelay}ms...`);
-			setTimeout(() => {this.status = "ok"; this.connect();}, this.reconnectAttemptDelay);
+			setTimeout(() => {
+				this.status = "ok";
+				this.sids = {};
+				this.mqueue = {};
+				this.umqueue = {};
+				this.log_i = [];
+				this.connect();
+			}, this.reconnectAttemptDelay);
 		}
 		else{
 			this._disconnected();
@@ -234,14 +246,24 @@ class Room {
     }
     
     sendCommand(...args){
-		if (this.firstCommand === true){
-			var terminator = "\x00";
-			this.firstCommand = false;
+	if (this.firstCommand === true){
+		var terminator = "\x00";
+		this.firstCommand = false;
         }
-		else {
-            var terminator = "\r\n\x00";
+	else {
+		var terminator = "\r\n\x00";
         }
         this.ws.send(args.join(":") + terminator);
+    }
+
+    getLastMessage(username) {
+	console.log(this.history)
+	for (let i = this.history.length - 1; i >= 0; i--) {
+		const msg = history[i];
+		if (msg.user.name.toLowerCase() === username.toLowerCase()) {
+			return msg;
+		}
+	}
     }
     
     message(msg, html = false){
@@ -264,6 +286,11 @@ class Room {
     setBgMode(mode){
         this.sendCommand("msgbg", mode.toString());
     }
+	
+    addHistory(msg){
+	this.history.push(msg)
+	if (this.history.length > 100){this.history.pop()}
+    }
 
     get userlist(){
 	let newset = [];
@@ -274,8 +301,25 @@ class Room {
     }
 
     _rcmd_ok(...args){
-        this.sendCommand("g_participants", "start")
+	this.mods = args[6].split(";").map(function(item) {
+		const splitItem = item.split(",");
+		const user = splitItem[0];
+		const value = splitItem[1];
+		return [user, value];
+	});
+
+    }
+	
+    _rcmd_inited(...args){
+	this.sendCommand("g_participants", "start")
         this.sendCommand("getpremium", "1");
+	for (let i = this.log_i.length - 1; i >= 0; i--) {
+		const msg = this.log_i[i];
+		const user = msg.user;
+		this.mgr.emit("HistoryMessage", this, user, msg);
+		this.addHistory(msg);
+	}
+	this.log_i = [];
     }
 
     _rcmd_g_participants(...args){
@@ -335,9 +379,11 @@ class Room {
     }
 
     _rcmd_i(...args){
-        var name = args[1];
-        var [msg, n, f] = _clean_message(args.slice(9).join(":"));
-        var [color, face, size] = _parseFont(f);
+        let time = args[0];
+        let name = args[1];
+	let puid = args[3];
+        let [msg, n, f] = _clean_message(args.slice(9).join(":"));
+        let [color, face, size] = _parseFont(f);
 
 	if (name === ""){
             name = "#" + args[2];
@@ -345,20 +391,28 @@ class Room {
                 name = "!anon" + _getAnonId(n, args[3]);
             }
         }
-	var user = User(name);
+	let user = User(name);
 	user.nameColor = n;
 	user.fontFace = face;
 	user.fontSize = size;
-	user.fontColor = color; 
+	user.fontColor = color;
+	
+	let msgid = args[5];
+        let ip = args[6];
+        let channel = args[7];
+
+	msg = new Message(msg, time, user, ip, channel, puid, msgid);
+	this.log_i.push(msg)
+	
     }
     
     _rcmd_b(...args){
-        //console.log(args);
-        var time = args[0];
-        var name = args[1];
-	var puid = args[3];
-        var [msg, n, f] = _clean_message(args.slice(9).join(":"));
-        var [color, face, size] = _parseFont(f);
+	
+        let time = args[0];
+        let name = args[1];
+	let puid = args[3];
+        let [msg, n, f] = _clean_message(args.slice(9).join(":"));
+        let [color, face, size] = _parseFont(f);
         
         if (name === ""){
             name = "#" + args[2];
@@ -366,23 +420,43 @@ class Room {
                 name = "!anon" + _getAnonId(n, args[3]);
             }
         }
-        var user = User(name);
+        let user = User(name);
 	user.nameColor = n;
 	user.fontFace = face;
 	user.fontSize = size;
 	user.fontColor = color;
 	
-        var ip = args[6];
-        var channel = args[7];
+        let ip = args[6];
+        let channel = args[7];
         this.channel = channel;
         
-        msg = new Message(msg, time, user, ip, channel, puid);
-        this.mgr.emit('Message', this, user, msg);
+        msg = new Message(msg, time, user, ip, channel, puid, "");
+	this.mqueue[args[5]] = msg
+
+	if (this.umqueue.hasOwnProperty(args[5])) {
+		let msgid = this.umqueue[args[5]];
+		msg.msgid = msgid;
+		delete this.umqueue[args[5]];
+		this.addHistory(msg);
+		this.mgr.emit('Message', this, msg.user, msg);
+	}
+        
     }
     
-    //_rcmd_u(...args){
-        
-    //}
+    _rcmd_u(...args){
+	this.umqueue[args[0]] = args[1]
+	if (this.mqueue.hasOwnProperty(args[0])) {
+		let msg = this.mqueue[args[0]];
+		msg.msgid = args[1];
+		delete this.mqueue[args[0]];
+		this.addHistory(msg);
+		this.mgr.emit('Message', this, msg.user, msg);
+	}
+	else{
+		console.log(this, "some secret");
+	}
+    }
+
 }
 
 class Private{
