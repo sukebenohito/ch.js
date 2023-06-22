@@ -257,9 +257,9 @@ class Room {
     }
 
     getLastMessage(username) {
-	console.log(this.history)
+	
 	for (let i = this.history.length - 1; i >= 0; i--) {
-		const msg = history[i];
+		const msg = this.history[i];
 		if (msg.user.name.toLowerCase() === username.toLowerCase()) {
 			return msg;
 		}
