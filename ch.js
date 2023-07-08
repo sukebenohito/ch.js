@@ -368,12 +368,12 @@ class Room {
 	if (args[0] === "0") { //leave
 		if(sid in this.sids){
 			delete this.sids[sid]
-			this.mgr.emit('onLeave', user, puid);
+			this.mgr.emit('onLeave', this, user, puid);
 		}
 	}
 
 	if (args[0] === "1" || args[0] === "2"){ //join
-		this.mgr.emit('onJoin', user, puid);
+		this.mgr.emit('onJoin', this, user, puid);
 		this.sids[sid] = [name, usertime, puid];
 	}
     }
