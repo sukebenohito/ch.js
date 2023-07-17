@@ -102,14 +102,16 @@ function _genUid(){
     return num.toString();
 }
 
-function _getAnonId (n, ssid) { 
-	if(!n || !ssid) return "";
-	var id = "";
-	for(var i=0; i<4; i++){
-		var a = parseInt(n.substr(i, 1)) + parseInt(ssid.substr(i+4, 1));
-		id += String(a>9 ? a-10 : a);
-	}
-	return id;
+function _getAnonId (a, b) { 
+	if (!b || !a)
+		return "";
+        var c = b.substr(4, 4), f = "", l, m, n;
+        for (n = 0; n < c.length; n++)
+		l = Number(c.substr(n, 1)),
+		m = Number(a.substr(n, 1)),
+                l = String(l + m),
+                f += l.substr(l.length - 1);
+        return f
 }
 
 const _users = {};
