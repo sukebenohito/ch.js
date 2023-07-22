@@ -153,6 +153,7 @@ class Room {
     constructor(mgr, name) {
         this.mgr = mgr;
         this.name = name;
+	this.owner = "";
         this.server = _getServer(name);
         this.port = 8081; // 8080 for ws://
         this.ws = null;
@@ -161,11 +162,11 @@ class Room {
 	this.reconnectAttemptDelay = 5000;
 	this.status = "not_ok";
 	this.uid = _genUid();
+	this.puid = this.uid.slice(0, 8);
 	this.sids = {};
 	this.history = [];
 	this.log_i = [];
 	this.mqueue = {};
-	this.umqueue = {};
     }
     
     connect(){
@@ -183,7 +184,6 @@ class Room {
 				this.status = "ok";
 				this.sids = {};
 				this.mqueue = {};
-				this.umqueue = {};
 				this.log_i = [];
 				this.connect();
 			}, this.reconnectAttemptDelay);
@@ -240,7 +240,7 @@ class Room {
         const [cmd, ...args] = food.split(":");   
         const handler = this[`_rcmd_${cmd}`];
         if (handler === undefined) {
-           //console.log(`Received command that has no handler from ${this.identifier}: <${cmd}>: ${args}`);
+            //console.log(`Received command that has no handler from ${this.identifier}: <${cmd}>: ${args}`);
         }
         else {
             handler.apply(this, args);
@@ -303,6 +303,7 @@ class Room {
     }
 
     _rcmd_ok(...args){
+	this.owner = args[0];
 	this.mods = args[6].split(";").map(function(item) {
 		const splitItem = item.split(",");
 		const user = splitItem[0];
@@ -322,6 +323,13 @@ class Room {
 		this.addHistory(msg);
 	}
 	this.log_i = [];
+    }
+
+    _rcmd_premium(...args){
+	let time = parseInt((new Date()).getTime() / 1000);
+	if (parseInt(args[1]) > time || this.owner.toLowerCase() === this.mgr.user.name.toLowerCase()){
+		this.setBgMode(1)
+	}
     }
 
     _rcmd_g_participants(...args){
@@ -409,7 +417,6 @@ class Room {
     }
     
     _rcmd_b(...args){
-	
         let time = args[0];
         let name = args[1];
 	let puid = args[3];
@@ -432,21 +439,17 @@ class Room {
         let channel = args[7];
         this.channel = channel;
         
-        msg = new Message(msg, time, user, ip, channel, puid, "");
-	this.mqueue[args[5]] = msg
-
-	if (this.umqueue.hasOwnProperty(args[5])) {
-		let msgid = this.umqueue[args[5]];
-		msg.msgid = msgid;
-		delete this.umqueue[args[5]];
-		this.addHistory(msg);
-		this.mgr.emit('Message', this, msg.user, msg);
+	if (this.mgr.username === "" && name[0] === "!" && puid === this.puid){
+		this.mgr.user.name = name
 	}
+
+        msg = new Message(msg, time, user, ip, channel, puid, "");
+
+	this.mqueue[args[5]] = msg
         
     }
     
     _rcmd_u(...args){
-	this.umqueue[args[0]] = args[1]
 	if (this.mqueue.hasOwnProperty(args[0])) {
 		let msg = this.mqueue[args[0]];
 		msg.msgid = args[1];
@@ -455,7 +458,7 @@ class Room {
 		this.mgr.emit('Message', this, msg.user, msg);
 	}
 	else{
-		console.log(this, "some secret");
+		console.log(this.name, "some secret");
 	}
     }
 
@@ -609,9 +612,9 @@ class Private{
         this.mgr.emit("PrivateMessage", this, user, msg);
     }
     
-    _rcmd_seller_name(...args){
-        //console.log(args);
-    }
+    //_rcmd_seller_name(...args){
+    //    console.log(args);
+    //}
     
 }
 
@@ -620,6 +623,7 @@ class Chatango  extends EventEmitter {
         super();
         this.username = null;
         this.password = null;
+	this.user = null;
       
         this.nameColor = "000";
         this.fontSize = 12;
@@ -633,6 +637,7 @@ class Chatango  extends EventEmitter {
     easy_start(user, password, rooms){
         this.username = user;
         this.password = password;
+	this.user = User(user);
 	if (this.username !== "" & this.password !== ""){
 		this.PM = new Private(this);
 		this.PM.connect();
