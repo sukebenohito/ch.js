@@ -444,9 +444,9 @@ class Room {
 	}
 
         msg = new Message(msg, time, user, ip, channel, puid, "");
-
+	this.mgr.emit('Message', this, msg.user, msg);
 	this.mqueue[args[5]] = msg
-        
+	this.addHistory(msg);
     }
     
     _rcmd_u(...args){
@@ -454,8 +454,6 @@ class Room {
 		let msg = this.mqueue[args[0]];
 		msg.msgid = args[1];
 		delete this.mqueue[args[0]];
-		this.addHistory(msg);
-		this.mgr.emit('Message', this, msg.user, msg);
 	}
 	else{
 		console.log(this.name, "some secret");
