@@ -137,7 +137,7 @@ class _User{
 }
 
 class Message{
-    constructor(text, time, user, ip = "", channel = "", puid, msgid = "") {
+    constructor(text, time, user, ip = "", channel = "", puid, msgid = "", unid = "") {
         this.time = time;
         this.text = text;
         this.user = user;
@@ -145,6 +145,7 @@ class Message{
         this.ip = ip;
 	this.puid = puid;
 	this.msgid = msgid;
+	this.unid = unid;
     }
 }
 
@@ -167,6 +168,7 @@ class Room {
 	this.history = [];
 	this.log_i = [];
 	this.mqueue = {};
+	this.banlist = {};
     }
     
     connect(){
@@ -267,6 +269,79 @@ class Room {
 		}
 	}
     }
+	clearAll(){
+		this.sendCommand("clearall")
+	}
+
+	rawClearUser(username, unid, ip){
+		this.sendCommand("delallmsg", unid, ip, username.toLowerCase())
+	}
+
+	clearUser(username){
+		let msg = this.getLastMessage(username);
+		if (msg){
+			if (["!", "#"].includes(username[0])){
+				username = ""
+			}
+			this.rawClearUser(username, msg.unid, msg.ip)
+		}
+	}
+
+	rawBanUser(username, unid, ip){
+		this.sendCommand("block", unid, ip, username.toLowerCase())
+	}
+
+	ban(username){
+		let msg = this.getLastMessage(username);
+		if (msg){
+			if (["!", "#"].includes(username[0])){
+				username = ""
+			}
+			this.rawBanUser(username, msg.unid, msg.ip)
+		}
+	}
+
+	requestBanlist() {
+		return new Promise((resolve, reject) => {
+			this.sendCommand("blocklist", "block", "0", "next", "500", "anons", "1");
+			//this.sendCommand("blocklist", "block", "", "next", "500");
+			this._rcmd_blocklist = function (...args) {
+				let sections = args.join(":").split(";")
+				for (let i = 0; i < sections.length; i++) {
+					let params = sections[i].split(":")
+					if (params.length != 5){continue}
+
+					let user = params[2].toLowerCase()
+					let time = parseInt(params[3]);
+					if (params[2] == ""){
+						user = "anon" 
+					}
+			
+					this.banlist[user] = {
+						"unid" : params[0],
+						"ip" : params[1],
+						"target" : user,
+						"time" : time,
+						"src" : params[4],
+						
+					}
+				}
+				resolve(this.banlist);
+			};
+		});
+	}
+
+	rawUnbanUser(unid, ip){
+		this.sendCommand("removeblock", unid, ip)
+	}
+
+	async unban(username){
+		await this.requestBanlist()
+		let rec = this.banlist[username.toLowerCase()]
+		if (rec){
+			this.rawUnbanUser(rec["unid"], rec["ip"])
+		}
+	}
     
     message(msg, html = false){
         msg = String(msg);
@@ -378,12 +453,12 @@ class Room {
 	if (args[0] === "0") { //leave
 		if(sid in this.sids){
 			delete this.sids[sid]
-			this.mgr.emit('onLeave', this, user, puid);
+			this.mgr.emit('Leave', this, user, puid);
 		}
 	}
 
 	if (args[0] === "1" || args[0] === "2"){ //join
-		this.mgr.emit('onJoin', this, user, puid);
+		this.mgr.emit('Join', this, user, puid);
 		this.sids[sid] = [name, usertime, puid];
 	}
     }
@@ -392,6 +467,7 @@ class Room {
         let time = args[0];
         let name = args[1];
 	let puid = args[3];
+	let unid = args[4];
         let [msg, n, f] = _clean_message(args.slice(9).join(":"));
         let [color, face, size] = _parseFont(f);
 
@@ -411,7 +487,7 @@ class Room {
         let ip = args[6];
         let channel = args[7];
 
-	msg = new Message(msg, time, user, ip, channel, puid, msgid);
+	msg = new Message(msg, time, user, ip, channel, puid, msgid, unid);
 	this.log_i.push(msg)
 	
     }
@@ -420,6 +496,7 @@ class Room {
         let time = args[0];
         let name = args[1];
 	let puid = args[3];
+	let unid = args[4];
         let [msg, n, f] = _clean_message(args.slice(9).join(":"));
         let [color, face, size] = _parseFont(f);
         
@@ -443,7 +520,7 @@ class Room {
 		this.mgr.user.name = name
 	}
 
-        msg = new Message(msg, time, user, ip, channel, puid, "");
+        msg = new Message(msg, time, user, ip, channel, puid, "", unid);
 	this.mgr.emit('Message', this, msg.user, msg);
 	this.mqueue[args[5]] = msg
 	this.addHistory(msg);
@@ -593,7 +670,6 @@ class Private{
 			};
 		});
 	}
-
     
     _rcmd_OK(...args){
 
