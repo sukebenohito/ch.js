@@ -7,108 +7,47 @@ const WebSocket = require('ws');
 const EventEmitter = require('events');
 const Axios = require('axios');
 
-const tsweights = [
-    ['5', 75],
-    ['6', 75],
-    ['7', 75],
-    ['8', 75],
-    ['16', 75],
-    ['17', 75],
-    ['18', 75],
-    ['9', 95],
-    ['11', 95],
-    ['12', 95],
-    ['13', 95],
-    ['14', 95],
-    ['15', 95],
-    ['19', 110],
-    ['23', 110],
-    ['24', 110],
-    ['25', 110],
-    ['26', 110],
-    ['28', 104],
-    ['29', 104],
-    ['30', 104],
-    ['31', 104],
-    ['32', 104],
-    ['33', 104],
-    ['35', 101],
-    ['36', 101],
-    ['37', 101],
-    ['38', 101],
-    ['39', 101],
-    ['40', 101],
-    ['41', 101],
-    ['42', 101],
-    ['43', 101],
-    ['44', 101],
-    ['45', 101],
-    ['46', 101],
-    ['47', 101],
-    ['48', 101],
-    ['49', 101],
-    ['50', 101],
-    ['52', 110],
-    ['53', 110],
-    ['55', 110],
-    ['57', 110],
-    ['58', 110],
-    ['59', 110],
-    ['60', 110],
-    ['61', 110],
-    ['62', 110],
-    ['63', 110],
-    ['64', 110],
-    ['65', 110],
-    ['66', 110],
-    ['68', 95],
-    ['71', 116],
-    ['72', 116],
-    ['73', 116],
-    ['74', 116],
-    ['75', 116],
-    ['76', 116],
-    ['77', 116],
-    ['78', 116],
-    ['79', 116],
-    ['80', 116],
-    ['81', 116],
-    ['82', 116],
-    ['83', 116],
-    ['84', 116]
-];
-
-function _getServer(group) {
-
-    group = group.replace('_', 'q').replace('-', 'q');
-
-    const fnv = parseInt(group.slice(0, Math.min(group.length, 5)), 36);
-    let lnv = group.slice(6, 6 + Math.min(group.length - 5, 3));
-    if (lnv) {
-        lnv = parseInt(lnv, 36);
-        if (lnv < 1000) {
-            lnv = 1000;
-        }
-    } else {
-        lnv = 1000;
+const _chatangoTagserver = {
+    "sw": {
+        "sv10": 110,
+        "sv12": 116,
+        "sv8": 101,
+        "sv6": 104,
+        "sv4": 110,
+        "sv2": 95,
+        "sv0": 75
+    },
+    "sm": [
+        ["5", "sv0"], ["6", "sv0"], ["7", "sv0"], ["8", "sv0"], ["16", "sv0"], ["17", "sv0"], ["18", "sv0"], ["9", "sv2"], ["11", "sv2"], ["12", "sv2"], ["13", "sv2"], ["14", "sv2"], ["15", "sv2"], ["19", "sv4"], ["23", "sv4"], ["24", "sv4"], ["25", "sv4"], ["26", "sv4"], ["28", "sv6"], ["29", "sv6"], ["30", "sv6"], ["31", "sv6"], ["32", "sv6"], ["33", "sv6"], ["35", "sv8"], ["36", "sv8"], ["37", "sv8"], ["38", "sv8"], ["39", "sv8"], ["40", "sv8"], ["41", "sv8"], ["42", "sv8"], ["43", "sv8"], ["44", "sv8"], ["45", "sv8"], ["46", "sv8"], ["47", "sv8"], ["48", "sv8"], ["49", "sv8"], ["50", "sv8"], ["52", "sv10"], ["53", "sv10"], ["55", "sv10"], ["57", "sv10"], ["58", "sv10"], ["59", "sv10"], ["60", "sv10"], ["61", "sv10"], ["62", "sv10"], ["63", "sv10"], ["64", "sv10"], ["65", "sv10"], ["66", "sv10"], ["68", "sv2"], ["71", "sv12"], ["72", "sv12"], ["73", "sv12"], ["74", "sv12"], ["75", "sv12"], ["76", "sv12"], ["77", "sv12"], ["78", "sv12"], ["79", "sv12"], ["80", "sv12"], ["81", "sv12"], ["82", "sv12"], ["83", "sv12"], ["84", "sv12"]
+        ]
     }
 
-    const num = (fnv % lnv) / lnv;
-    const sum = (arr = []) => arr.reduce((total, val) => total + val);
-    const maxnum = sum(tsweights.map((n) => {
-        return n[1];
-    }));
-    let cumfreq = 0;
-    for (let i = 0; i < tsweights.length; i++) {
-        const weight = tsweights[i];
-        cumfreq += weight[1] / maxnum;
-        if (num <= cumfreq) {
-            return `s${weight[0]}.chatango.com`;
+
+function _getServer(a) {
+    a = a.split("_").join("q");
+    a = a.split("-").join("q");
+    var b = Math.min(5, a.length),
+        b = parseInt(a.substr(0, b), 36);
+    a = a.substr(6, Math.min(3, a.length - 5));
+    a = parseInt(a, 36);
+    a = isNaN(a) || 1E3 >= a || void 0 == a ? 1E3 : a;
+    b = b % a / a;
+    a = _chatangoTagserver.sm;
+    var c = 0,
+        f;
+    for (f = 0; f < a.length; f++)
+        c += _chatangoTagserver.sw[a[f][1]];
+    var l = 0,
+        m = {};
+    for (f = 0; f < a.length; f++)
+        l += _chatangoTagserver.sw[a[f][1]] / c,
+        m[a[f][0]] = l;
+    for (f = 0; f < a.length; f++)
+        if (b <= m[a[f][0]]) {
+            sNumber = a[f][0];
+            break
         }
-    }
-    const err_message = `Couldn't find host server for room ${group}`;
-    error(err_message);
-    throw new Error(err_message);
+    return "s" + sNumber + ".chatango.com"
 }
 
 function _strip_html(msg) {
@@ -206,7 +145,7 @@ class _User {
 }
 
 class Message {
-    constructor(text, time, user, ip = "", channel = "", puid, msgid = "", unid = "") {
+    constructor(text, time, user, ip = "", channel = "", puid = "", msgid = "", unid = "") {
         this.time = time;
         this.text = text;
         this.user = user;
@@ -742,8 +681,19 @@ class Private {
         });
     }
 
-    _rcmd_OK(...args) {
+    setBgMode(mode) {
+        this.sendCommand("msgbg", mode.toString());
+    }
 
+    setIdle(mode) {
+        this.sendCommand("idle", "0");
+    }
+
+    setActive(mode) {
+        this.sendCommand("idle", "1");
+    }
+
+    _rcmd_OK(...args) {
         this.sendCommand("wl");
         this.sendCommand("getblock");
         this.sendCommand("getpremium", "1");
@@ -757,9 +707,12 @@ class Private {
         this.mgr.emit("PrivateMessage", this, user, msg);
     }
 
-    //_rcmd_seller_name(...args){
-    //    console.log(args);
-    //}
+    _rcmd_premium(...args) {
+        let time = parseInt((new Date()).getTime() / 1000);
+        if (parseInt(args[1]) > time) {
+            this.setBgMode(1)
+        }
+    }
 
 }
 
