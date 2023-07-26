@@ -5,7 +5,8 @@ const Bot = new Chatango();
 
 //Bot.easy_start("uwuUserName", "uwuPassword", ["nico-nico", "desertofdead"]);
 
-Bot.easy_start(process.env.CHID, process.env.CHPW, ["nico-nico", "desertofdead"]);// run as anon check nico-nico.chatango.com   
+// run as anon check nico-nico.chatango.com
+Bot.easy_start("", "", ["nico-nico", "desertofdead"]);   
 Bot.nameColor = "f00";
 
 var owner = "agung" //replace this with your own chatango ID
