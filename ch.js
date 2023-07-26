@@ -685,11 +685,11 @@ class Private {
         this.sendCommand("msgbg", mode.toString());
     }
 
-    setIdle(mode) {
+    setIdle() {
         this.sendCommand("idle", "0");
     }
 
-    setActive(mode) {
+    setActive() {
         this.sendCommand("idle", "1");
     }
 
