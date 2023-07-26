@@ -3,7 +3,7 @@ const Bot = new Chatango();
 
 //require('dotenv').config()
 
-//Bot.easy_start("uwuUserName", "uwuPassword", ["nico-nico", "desertofdead"]);
+//Bot.easy_start("uwuUserName", "uwuPassword", ["nico-nico", "tango-hyoo"]);
 
 //run as anon check nico-nico.chatango.com
 Bot.easy_start("", "", ["nico-nico", "tango-hyoo"]);   
