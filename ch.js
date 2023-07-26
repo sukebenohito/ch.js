@@ -163,7 +163,7 @@ class Room {
         this.mgr = mgr;
         this.name = name;
         this.owner = "";
-        this.server = _getServer(name);
+        this.server = "wss://" + _getServer(name);
         this.port = 8081; // 8080 for ws://
         this.ws = null;
         this.firstCommand = true;
@@ -174,13 +174,14 @@ class Room {
         this.puid = this.uid.slice(0, 8);
         this.sids = {};
         this.history = [];
+        this.historyMaxLength = 100;
         this.log_i = [];
         this.mqueue = {};
         this.banlist = {};
     }
 
     connect() {
-        var ws = new WebSocket(`wss://${this.server}:${this.port}`, {
+        var ws = new WebSocket(`${this.server}:${this.port}`, {
             origin: 'https://st.chatango.com'
         });
         ws.on('open', () => {
@@ -374,7 +375,7 @@ class Room {
 
     addHistory(msg) {
         this.history.push(msg)
-        if (this.history.length > 100) {
+        if (this.history.length > this.historyMaxLength) {
             this.history.pop()
         }
     }
@@ -551,7 +552,7 @@ class Private {
     constructor(mgr) {
         this.mgr = mgr;
         this.name = "PrivateMessage"
-        this.server = "c1.chatango.com";
+        this.server = "wss://c1.chatango.com";
         this.port = 8081; // 8080 for ws://
         this.ws = null;
         this.firstCommand = true;
@@ -561,7 +562,7 @@ class Private {
 
 
     connect() {
-        var ws = new WebSocket(`wss://${this.server}:${this.port}`, {
+        var ws = new WebSocket(`${this.server}:${this.port}`, {
             origin: 'https://st.chatango.com'
         });
         ws.on('open', () => {
@@ -666,6 +667,7 @@ class Private {
 
     message(username, message) {
         if (username !== undefined || username !== null || message !== undefined || message !== null) {
+            message = String(message);
             message = `<n${this.mgr.nameColor}/><m v="1"><g x${this.mgr.fontSize}s${this.mgr.fontColor}="${this.mgr.fontFace}">${message}</g></m>`
             this.sendCommand("msg", username, message)
         }
