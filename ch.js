@@ -72,6 +72,7 @@ function _clean_message(msg) {
     msg = msg.replace(/&gt;/g, ">");
     msg = msg.replace(/&quot;/g, "\"");
     msg = msg.replace(/&apos;/g, "'");
+    msg = msg.replace(/&#39;/g, "'");
     msg = msg.replace(/&amp;/g, "&");
     return [msg, n, f];
 }
