@@ -58,13 +58,11 @@ function _strip_html(msg) {
 function _clean_message(msg) {
 
     var n = msg.match(/<n(.*?)\/>/i);
-    if (n !== null) {
-        n = n[1]
-    };
+    if (n !== null) {n = n[1]};
+    if (n === null){n = ""};
     var f = msg.match(/<f(.*?)>/i);
-    if (f !== null) {
-        f = f[1]
-    };
+    if (f !== null) {f = f[1]};
+
     msg = msg.replace(/<n.*?\/>/g, "");
     msg = msg.replace(/<f.*?>/g, "");
     msg = _strip_html(msg);
@@ -98,7 +96,7 @@ function _parseFont(f) {
         };
         return [col, face, size];
     } else {
-        return ["000", "0", "10"];
+        return ["000", "", 10];
     }
 
 }
