@@ -19,26 +19,26 @@ const _chatangoTagserver = {
     },
     "sm": [
         ["5", "sv0"], ["6", "sv0"], ["7", "sv0"], ["8", "sv0"], ["16", "sv0"], ["17", "sv0"], ["18", "sv0"], ["9", "sv2"], ["11", "sv2"], ["12", "sv2"], ["13", "sv2"], ["14", "sv2"], ["15", "sv2"], ["19", "sv4"], ["23", "sv4"], ["24", "sv4"], ["25", "sv4"], ["26", "sv4"], ["28", "sv6"], ["29", "sv6"], ["30", "sv6"], ["31", "sv6"], ["32", "sv6"], ["33", "sv6"], ["35", "sv8"], ["36", "sv8"], ["37", "sv8"], ["38", "sv8"], ["39", "sv8"], ["40", "sv8"], ["41", "sv8"], ["42", "sv8"], ["43", "sv8"], ["44", "sv8"], ["45", "sv8"], ["46", "sv8"], ["47", "sv8"], ["48", "sv8"], ["49", "sv8"], ["50", "sv8"], ["52", "sv10"], ["53", "sv10"], ["55", "sv10"], ["57", "sv10"], ["58", "sv10"], ["59", "sv10"], ["60", "sv10"], ["61", "sv10"], ["62", "sv10"], ["63", "sv10"], ["64", "sv10"], ["65", "sv10"], ["66", "sv10"], ["68", "sv2"], ["71", "sv12"], ["72", "sv12"], ["73", "sv12"], ["74", "sv12"], ["75", "sv12"], ["76", "sv12"], ["77", "sv12"], ["78", "sv12"], ["79", "sv12"], ["80", "sv12"], ["81", "sv12"], ["82", "sv12"], ["83", "sv12"], ["84", "sv12"]
-        ]
-    }
+    ]
+}
 
 
 function _getServer(a) {
     a = a.split("_").join("q");
     a = a.split("-").join("q");
     var b = Math.min(5, a.length),
-        b = parseInt(a.substr(0, b), 36);
+    b = parseInt(a.substr(0, b), 36);
     a = a.substr(6, Math.min(3, a.length - 5));
     a = parseInt(a, 36);
     a = isNaN(a) || 1E3 >= a || void 0 == a ? 1E3 : a;
     b = b % a / a;
     a = _chatangoTagserver.sm;
     var c = 0,
-        f;
+    f;
     for (f = 0; f < a.length; f++)
         c += _chatangoTagserver.sw[a[f][1]];
     var l = 0,
-        m = {};
+    m = {};
     for (f = 0; f < a.length; f++)
         l += _chatangoTagserver.sw[a[f][1]] / c,
         m[a[f][0]] = l;
@@ -47,7 +47,7 @@ function _getServer(a) {
             sNumber = a[f][0];
             break
         }
-    return "s" + sNumber + ".chatango.com"
+        return "s" + sNumber + ".chatango.com"
 }
 
 function _strip_html(msg) {
@@ -112,8 +112,8 @@ function _getAnonId(a, b) {
     if (!b || !a)
         return "";
     var c = b.substr(4, 4),
-        f = "",
-        l, m, n;
+    f = "",
+    l, m, n;
     for (n = 0; n < c.length; n++)
         l = Number(c.substr(n, 1)),
         m = Number(a.substr(n, 1)),
@@ -389,11 +389,19 @@ class Room {
 
     _rcmd_ok(...args) {
         this.owner = args[0];
-        this.mods = args[6].split(";").map(function(item) {
+        this.mods = args[6]
+        .split(";")
+        .map(function(item) {
             const splitItem = item.split(",");
             const user = splitItem[0];
             const value = splitItem[1];
+            if (user === "") {
+                return null; // Mark it as invalid
+            }
             return [user, value];
+        })
+        .filter(function(item) {
+            return item !== null; // Remove invalid entries
         });
 
     }
@@ -592,28 +600,28 @@ class Private {
     _auth() {
         if (this.mgr.username !== "" & this.mgr.password !== "") {
             const response = Axios.get('https://chatango.com/login', {
-                    params: {
-                        user_id: this.mgr.username,
-                        password: this.mgr.password,
-                        storecookie: "on",
-                        checkerrors: "yes"
-                    }
-                })
+                params: {
+                    user_id: this.mgr.username,
+                    password: this.mgr.password,
+                    storecookie: "on",
+                    checkerrors: "yes"
+                }
+            })
 
-                .then((response) => {
-                    try {
-                        var token = response["headers"]["set-cookie"].toString();
-                        token = token.match(/auth\.chatango\.com ?= ?([^;]*)/);
+            .then((response) => {
+                try {
+                    var token = response["headers"]["set-cookie"].toString();
+                    token = token.match(/auth\.chatango\.com ?= ?([^;]*)/);
 
-                        if (token !== null) {
-                            token = token[1];
-                            this.sendCommand("tlogin", token, "2");
-                        }
-                    } catch (err) {
-                        this.disconnect();
-                        console.log(err);
+                    if (token !== null) {
+                        token = token[1];
+                        this.sendCommand("tlogin", token, "2");
                     }
-                })
+                } catch (err) {
+                    this.disconnect();
+                    console.log(err);
+                }
+            })
         }
     }
 
@@ -758,6 +766,7 @@ class Chatango extends EventEmitter {
             let _room = this.rooms[room];
             _room.status = "not_ok";
             _room.disconnect();
+            delete this.rooms[room]
         }
     }
 
